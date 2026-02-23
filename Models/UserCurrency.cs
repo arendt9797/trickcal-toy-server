@@ -8,4 +8,5 @@ public class UserCurrency
     public string UserId { get; set; } = string.Empty;
     public int Eleaf { get; set; }
     public int Gold { get; set; }
+    public int Faith { get; set; }
 }

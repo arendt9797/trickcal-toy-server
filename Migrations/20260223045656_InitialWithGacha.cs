@@ -33,46 +33,17 @@ namespace TrickcalServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Players",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Nickname = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
-                    Level = table.Column<int>(type: "integer", nullable: false),
-                    Exp = table.Column<long>(type: "bigint", nullable: false),
-                    Gold = table.Column<long>(type: "bigint", nullable: false),
-                    Stamina = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    LastLoginAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Players", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "UserCurrencies",
                 columns: table => new
                 {
                     UserId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Eleaf = table.Column<int>(type: "integer", nullable: false),
-                    Gold = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserCurrencies", x => x.UserId);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "UserPities",
-                columns: table => new
-                {
-                    UserId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Gold = table.Column<int>(type: "integer", nullable: false),
                     Faith = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserPities", x => x.UserId);
+                    table.PrimaryKey("PK_UserCurrencies", x => x.UserId);
                 });
 
             migrationBuilder.CreateTable(
@@ -122,29 +93,6 @@ namespace TrickcalServer.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "PlayerCharacters",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    PlayerId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CharacterId = table.Column<string>(type: "text", nullable: false),
-                    Star = table.Column<int>(type: "integer", nullable: false),
-                    Level = table.Column<int>(type: "integer", nullable: false),
-                    Exp = table.Column<long>(type: "bigint", nullable: false),
-                    AcquiredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PlayerCharacters", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_PlayerCharacters_Players_PlayerId",
-                        column: x => x.PlayerId,
-                        principalTable: "Players",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
             migrationBuilder.InsertData(
                 table: "Cards",
                 columns: new[] { "Id", "BaseAtk", "BaseDef", "Class", "Grade", "Name", "Tribe" },
@@ -174,13 +122,8 @@ namespace TrickcalServer.Migrations
 
             migrationBuilder.InsertData(
                 table: "UserCurrencies",
-                columns: new[] { "UserId", "Eleaf", "Gold" },
-                values: new object[] { "testuser", 10000, 5000 });
-
-            migrationBuilder.InsertData(
-                table: "UserPities",
-                columns: new[] { "UserId", "Faith" },
-                values: new object[] { "testuser", 0 });
+                columns: new[] { "UserId", "Eleaf", "Faith", "Gold" },
+                values: new object[] { "testuser", 10000, 0, 5000 });
 
             migrationBuilder.InsertData(
                 table: "GachaBanners",
@@ -195,18 +138,6 @@ namespace TrickcalServer.Migrations
                 name: "IX_GachaBanners_PickupCardId",
                 table: "GachaBanners",
                 column: "PickupCardId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PlayerCharacters_PlayerId_CharacterId",
-                table: "PlayerCharacters",
-                columns: new[] { "PlayerId", "CharacterId" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Players_Nickname",
-                table: "Players",
-                column: "Nickname",
-                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserCards_CardId",
@@ -227,19 +158,10 @@ namespace TrickcalServer.Migrations
                 name: "GachaBanners");
 
             migrationBuilder.DropTable(
-                name: "PlayerCharacters");
-
-            migrationBuilder.DropTable(
                 name: "UserCards");
 
             migrationBuilder.DropTable(
                 name: "UserCurrencies");
-
-            migrationBuilder.DropTable(
-                name: "UserPities");
-
-            migrationBuilder.DropTable(
-                name: "Players");
 
             migrationBuilder.DropTable(
                 name: "Cards");

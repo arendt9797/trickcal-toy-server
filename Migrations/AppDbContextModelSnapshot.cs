@@ -326,76 +326,6 @@ namespace TrickcalServer.Migrations
                         });
                 });
 
-            modelBuilder.Entity("TrickcalServer.Models.PlayerAccount", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<long>("Exp")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("Gold")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("LastLoginAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Level")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Nickname")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<int>("Stamina")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Nickname")
-                        .IsUnique();
-
-                    b.ToTable("Players");
-                });
-
-            modelBuilder.Entity("TrickcalServer.Models.PlayerCharacter", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("AcquiredAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CharacterId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<long>("Exp")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("Level")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("PlayerId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Star")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PlayerId", "CharacterId")
-                        .IsUnique();
-
-                    b.ToTable("PlayerCharacters");
-                });
-
             modelBuilder.Entity("TrickcalServer.Models.UserCard", b =>
                 {
                     b.Property<int>("Id")
@@ -437,6 +367,9 @@ namespace TrickcalServer.Migrations
                     b.Property<int>("Eleaf")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Faith")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Gold")
                         .HasColumnType("integer");
 
@@ -449,28 +382,8 @@ namespace TrickcalServer.Migrations
                         {
                             UserId = "testuser",
                             Eleaf = 10000,
+                            Faith = 0,
                             Gold = 5000
-                        });
-                });
-
-            modelBuilder.Entity("TrickcalServer.Models.UserPity", b =>
-                {
-                    b.Property<string>("UserId")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("Faith")
-                        .HasColumnType("integer");
-
-                    b.HasKey("UserId");
-
-                    b.ToTable("UserPities");
-
-                    b.HasData(
-                        new
-                        {
-                            UserId = "testuser",
-                            Faith = 0
                         });
                 });
 
@@ -485,17 +398,6 @@ namespace TrickcalServer.Migrations
                     b.Navigation("PickupCard");
                 });
 
-            modelBuilder.Entity("TrickcalServer.Models.PlayerCharacter", b =>
-                {
-                    b.HasOne("TrickcalServer.Models.PlayerAccount", "Player")
-                        .WithMany("Characters")
-                        .HasForeignKey("PlayerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Player");
-                });
-
             modelBuilder.Entity("TrickcalServer.Models.UserCard", b =>
                 {
                     b.HasOne("TrickcalServer.Models.Card", "Card")
@@ -505,11 +407,6 @@ namespace TrickcalServer.Migrations
                         .IsRequired();
 
                     b.Navigation("Card");
-                });
-
-            modelBuilder.Entity("TrickcalServer.Models.PlayerAccount", b =>
-                {
-                    b.Navigation("Characters");
                 });
 #pragma warning restore 612, 618
         }

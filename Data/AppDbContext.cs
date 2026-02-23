@@ -7,36 +7,14 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<PlayerAccount> Players => Set<PlayerAccount>();
-    public DbSet<PlayerCharacter> PlayerCharacters => Set<PlayerCharacter>();
     public DbSet<Card> Cards => Set<Card>();
     public DbSet<GachaBanner> GachaBanners => Set<GachaBanner>();
     public DbSet<UserCard> UserCards => Set<UserCard>();
     public DbSet<UserCurrency> UserCurrencies => Set<UserCurrency>();
-    public DbSet<UserPity> UserPities => Set<UserPity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        // ── PlayerAccount ──
-        modelBuilder.Entity<PlayerAccount>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.Nickname).IsUnique();
-            entity.Property(e => e.Nickname).HasMaxLength(20);
-        });
-
-        // ── PlayerCharacter ──
-        modelBuilder.Entity<PlayerCharacter>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => new { e.PlayerId, e.CharacterId }).IsUnique();
-            entity.HasOne(e => e.Player)
-                  .WithMany(p => p.Characters)
-                  .HasForeignKey(e => e.PlayerId)
-                  .OnDelete(DeleteBehavior.Cascade);
-        });
 
         // ── Card (사도) ──
         modelBuilder.Entity<Card>(entity =>
@@ -74,13 +52,6 @@ public class AppDbContext : DbContext
 
         // ── UserCurrency ──
         modelBuilder.Entity<UserCurrency>(entity =>
-        {
-            entity.HasKey(e => e.UserId);
-            entity.Property(e => e.UserId).HasMaxLength(50);
-        });
-
-        // ── UserPity ──
-        modelBuilder.Entity<UserPity>(entity =>
         {
             entity.HasKey(e => e.UserId);
             entity.Property(e => e.UserId).HasMaxLength(50);
@@ -158,11 +129,7 @@ public class AppDbContext : DbContext
     private static void SeedTestUser(ModelBuilder mb)
     {
         mb.Entity<UserCurrency>().HasData(
-            new UserCurrency { UserId = "testuser", Eleaf = 10000, Gold = 5000 }
-        );
-
-        mb.Entity<UserPity>().HasData(
-            new UserPity { UserId = "testuser", Faith = 0 }
+            new UserCurrency { UserId = "testuser", Eleaf = 10000, Gold = 5000, Faith = 0 }
         );
     }
 }

@@ -48,6 +48,7 @@ public record UserCurrencyDto
     [Id(0)] public string UserId { get; init; } = string.Empty;
     [Id(1)] public int Eleaf { get; init; }
     [Id(2)] public int Gold { get; init; }
+    [Id(3)] public int Faith { get; init; }
 }
 
 // ── Grain 상태 ──

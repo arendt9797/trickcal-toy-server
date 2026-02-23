@@ -35,7 +35,6 @@ public class UserGrain : Grain, IUserGrain
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var currency = await db.UserCurrencies.FindAsync([userId], ct);
-        var pity = await db.UserPities.FindAsync([userId], ct);
         var cards = await db.UserCards
             .Where(c => c.UserId == userId)
             .ToListAsync(ct);
@@ -43,11 +42,8 @@ public class UserGrain : Grain, IUserGrain
         if (currency is null)
         {
             // 신규 유저: DB에 기본 레코드 생성
-            currency = new UserCurrency { UserId = userId, Eleaf = 0, Gold = 0 };
+            currency = new UserCurrency { UserId = userId, Eleaf = 0, Gold = 0, Faith = 0 };
             db.UserCurrencies.Add(currency);
-
-            pity = new UserPity { UserId = userId, Faith = 0 };
-            db.UserPities.Add(pity);
 
             await db.SaveChangesAsync(ct);
         }
@@ -55,7 +51,7 @@ public class UserGrain : Grain, IUserGrain
         _state.State.UserId = userId;
         _state.State.Eleaf = currency.Eleaf;
         _state.State.Gold = currency.Gold;
-        _state.State.Faith = pity?.Faith ?? 0;
+        _state.State.Faith = currency.Faith;
         _state.State.Cards = cards.Select(c => new UserCardState
         {
             CardId = c.CardId,
@@ -73,7 +69,8 @@ public class UserGrain : Grain, IUserGrain
         {
             UserId = _state.State.UserId,
             Eleaf = _state.State.Eleaf,
-            Gold = _state.State.Gold
+            Gold = _state.State.Gold,
+            Faith = _state.State.Faith
         });
     }
 
@@ -134,7 +131,7 @@ public class UserGrain : Grain, IUserGrain
     {
         _state.State.Faith += amount;
 
-        await PersistPityAsync();
+        await PersistCurrencyAsync();
         await _state.WriteStateAsync();
     }
 
@@ -145,7 +142,7 @@ public class UserGrain : Grain, IUserGrain
 
         _state.State.Faith -= amount;
 
-        await PersistPityAsync();
+        await PersistCurrencyAsync();
         await _state.WriteStateAsync();
     }
 
@@ -159,19 +156,7 @@ public class UserGrain : Grain, IUserGrain
         {
             currency.Eleaf = _state.State.Eleaf;
             currency.Gold = _state.State.Gold;
-            await db.SaveChangesAsync();
-        }
-    }
-
-    private async Task PersistPityAsync()
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var pity = await db.UserPities.FindAsync(_state.State.UserId);
-        if (pity is not null)
-        {
-            pity.Faith = _state.State.Faith;
+            currency.Faith = _state.State.Faith;
             await db.SaveChangesAsync();
         }
     }

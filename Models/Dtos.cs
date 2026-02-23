@@ -1,6 +1,7 @@
 namespace TrickcalServer.Models;
 
 // ── Gacha DTOs ──
+// 서버에서 클라이언트로 데이터를 주고받기 위한 그릇: 클라이언트에는 이것만 보내줄거야
 
 [GenerateSerializer]
 public record GachaRateEntry
@@ -52,6 +53,8 @@ public record UserCurrencyDto
 }
 
 // ── Grain 상태 ──
+// DB에서 불러와서 메모리(grain)에 올려놓는 상태
+// "이 유저의 전체 정보를 메모리에 이렇게 들고 있을거야"
 
 [GenerateSerializer]
 public class UserGrainState

@@ -62,7 +62,6 @@ public class GachaTableGrain : Grain, IGachaTableGrain
         // 고정 확률
         const decimal star1TotalRate = 0.76m;
         const decimal star2TotalRate = 0.21m;
-        const decimal highTierTotalRate = 0.03m; // 3성 이상 전체
 
         var star1Cards = allCards.Where(c => c.Grade == CardGrade.Star1).ToList();
         var star2Cards = allCards.Where(c => c.Grade == CardGrade.Star2).ToList();
@@ -101,17 +100,17 @@ public class GachaTableGrain : Grain, IGachaTableGrain
             }
         }
 
-        // 3성 이상: 3% 분배
-        var highTierCards = star3Cards.Concat(eldainCards).ToList();
+        // 3성 이상: 3% 분배 (3성 2.7%, 엘다인 0.3%)
+        const decimal star3BaseRate = 0.027m;
+        const decimal eldainBaseRate = 0.003m;
 
+        var highTierCards = star3Cards.Concat(eldainCards).ToList();
         if (highTierCards.Count > 0)
         {
+            var pickupCard = highTierCards.FirstOrDefault(c => c.Id == banner.PickupCardId);
             var pickupRate = banner.PickupRate;
-            var nonPickupCards = highTierCards.Where(c => c.Id != banner.PickupCardId).ToList();
-            var remainingRate = highTierTotalRate - pickupRate;
 
             // 픽업 사도
-            var pickupCard = highTierCards.FirstOrDefault(c => c.Id == banner.PickupCardId);
             if (pickupCard is not null)
             {
                 rates.Add(new GachaRateEntry
@@ -123,11 +122,33 @@ public class GachaTableGrain : Grain, IGachaTableGrain
                 });
             }
 
-            // 나머지 3성 + 엘다인 균등 분배
-            if (nonPickupCards.Count > 0)
+            // 픽업 등급에 따라 해당 등급의 잔여 확률에서만 픽업 확률 차감
+            var remainingStar3Rate = star3BaseRate - (pickupCard?.Grade == CardGrade.Star3 ? pickupRate : 0m);
+            var remainingEldainRate = eldainBaseRate - (pickupCard?.Grade == CardGrade.Eldain ? pickupRate : 0m);
+
+            // 나머지 3성 카드 분배
+            var nonPickupStar3Cards = star3Cards.Where(c => c.Id != banner.PickupCardId).ToList();
+            if (nonPickupStar3Cards.Count > 0 && remainingStar3Rate > 0)
             {
-                var perCard = remainingRate / nonPickupCards.Count;
-                foreach (var card in nonPickupCards)
+                var perCard = remainingStar3Rate / nonPickupStar3Cards.Count;
+                foreach (var card in nonPickupStar3Cards)
+                {
+                    rates.Add(new GachaRateEntry
+                    {
+                        CardId = card.Id,
+                        CardName = card.Name,
+                        Grade = card.Grade.ToString(),
+                        Rate = perCard
+                    });
+                }
+            }
+
+            // 나머지 엘다인 카드 분배
+            var nonPickupEldainCards = eldainCards.Where(c => c.Id != banner.PickupCardId).ToList();
+            if (nonPickupEldainCards.Count > 0 && remainingEldainRate > 0)
+            {
+                var perCard = remainingEldainRate / nonPickupEldainCards.Count;
+                foreach (var card in nonPickupEldainCards)
                 {
                     rates.Add(new GachaRateEntry
                     {

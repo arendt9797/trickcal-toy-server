@@ -23,7 +23,7 @@ public class UserGrain : Grain, IUserGrain
 
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        // Redis에 데이터 없으면 DB에서 로드 (신규 유저 or Redis 유실)
+        // Redis에 데이터 없으면 DB에서 로드 (신규 or Redis 유실)
         if (string.IsNullOrEmpty(_state.State.UserId))
         {
             await LoadFromDatabaseAsync(cancellationToken);

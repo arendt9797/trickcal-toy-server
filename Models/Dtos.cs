@@ -64,7 +64,7 @@ public class UserGrainState
     [Id(2)] public int Gold { get; set; }
     [Id(3)] public int Faith { get; set; }
     [Id(4)] public List<UserCardState> Cards { get; set; } = [];
-    [Id(5)] public bool IsInitialized { get; set; }
+    // IsInitialized 제거 — string.IsNullOrEmpty(UserId)로 대체
 }
 
 [GenerateSerializer]

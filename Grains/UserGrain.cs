@@ -10,6 +10,8 @@ public class UserGrain : Grain, IUserGrain
 {
     private readonly IPersistentState<UserGrainState> _state;
     private readonly IServiceProvider _serviceProvider;
+    private bool _isDirty = false;
+    private IGrainTimer? _flushTimer;
 
     public UserGrain(
         [PersistentState("user", "Default")] IPersistentState<UserGrainState> state,
@@ -21,10 +23,27 @@ public class UserGrain : Grain, IUserGrain
 
     public override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        if (!_state.State.IsInitialized)
+        // Redis에 데이터 없으면 DB에서 로드 (신규 유저 or Redis 유실)
+        if (string.IsNullOrEmpty(_state.State.UserId))
         {
             await LoadFromDatabaseAsync(cancellationToken);
         }
+
+        // 30초마다 DB에 변경사항 flush
+        _flushTimer = this.RegisterGrainTimer(
+            FlushToDatabaseAsync,
+            new GrainTimerCreationOptions
+            {
+                DueTime = TimeSpan.FromSeconds(30),
+                Period = TimeSpan.FromSeconds(30)
+            });
+    }
+
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        // Grain 내려갈 때 미flush 데이터 보장
+        if (_isDirty)
+            await FlushToDatabaseAsync(cancellationToken);
     }
 
     private async Task LoadFromDatabaseAsync(CancellationToken ct)
@@ -44,7 +63,6 @@ public class UserGrain : Grain, IUserGrain
             // 신규 유저: DB에 기본 레코드 생성
             currency = new UserCurrency { UserId = userId, Eleaf = 0, Gold = 0, Faith = 0 };
             db.UserCurrencies.Add(currency);
-
             await db.SaveChangesAsync(ct);
         }
 
@@ -58,9 +76,62 @@ public class UserGrain : Grain, IUserGrain
             Level = c.Level,
             DuplicateCount = c.DuplicateCount
         }).ToList();
-        _state.State.IsInitialized = true;
 
         await _state.WriteStateAsync();
+    }
+
+    // Write-Behind: 타이머 또는 Grain 종료 시 DB 동기화
+    private async Task FlushToDatabaseAsync(CancellationToken ct)
+    {
+        if (!_isDirty) return;
+
+        using var scope = _serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        // Currency upsert
+        var currency = await db.UserCurrencies.FindAsync([_state.State.UserId], ct);
+        if (currency is null)
+        {
+            db.UserCurrencies.Add(new UserCurrency
+            {
+                UserId = _state.State.UserId,
+                Eleaf = _state.State.Eleaf,
+                Gold = _state.State.Gold,
+                Faith = _state.State.Faith
+            });
+        }
+        else
+        {
+            currency.Eleaf = _state.State.Eleaf;
+            currency.Gold = _state.State.Gold;
+            currency.Faith = _state.State.Faith;
+        }
+
+        // Cards 전체 스냅샷 upsert
+        foreach (var card in _state.State.Cards)
+        {
+            var dbCard = await db.UserCards
+                .FirstOrDefaultAsync(c => c.UserId == _state.State.UserId && c.CardId == card.CardId, ct);
+
+            if (dbCard is null)
+            {
+                db.UserCards.Add(new UserCard
+                {
+                    UserId = _state.State.UserId,
+                    CardId = card.CardId,
+                    Level = card.Level,
+                    DuplicateCount = card.DuplicateCount
+                });
+            }
+            else
+            {
+                dbCard.Level = card.Level;
+                dbCard.DuplicateCount = card.DuplicateCount;
+            }
+        }
+
+        await db.SaveChangesAsync(ct);
+        _isDirty = false;
     }
 
     public Task<UserCurrencyDto> GetCurrencyAsync()
@@ -80,8 +151,7 @@ public class UserGrain : Grain, IUserGrain
             throw new InvalidOperationException($"엘리프가 부족합니다. (보유: {_state.State.Eleaf}, 필요: {amount})");
 
         _state.State.Eleaf -= amount;
-
-        await PersistCurrencyAsync();
+        _isDirty = true;
         await _state.WriteStateAsync();
     }
 
@@ -89,36 +159,12 @@ public class UserGrain : Grain, IUserGrain
     {
         var existing = _state.State.Cards.FirstOrDefault(c => c.CardId == cardId);
 
-        using var scope = _serviceProvider.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
         if (existing is not null)
-        {
             existing.DuplicateCount++;
-
-            var dbCard = await db.UserCards
-                .FirstOrDefaultAsync(c => c.UserId == _state.State.UserId && c.CardId == cardId);
-            if (dbCard is not null)
-            {
-                dbCard.DuplicateCount = existing.DuplicateCount;
-                await db.SaveChangesAsync();
-            }
-        }
         else
-        {
-            var newCard = new UserCardState { CardId = cardId, Level = 1, DuplicateCount = 0 };
-            _state.State.Cards.Add(newCard);
+            _state.State.Cards.Add(new UserCardState { CardId = cardId, Level = 1, DuplicateCount = 0 });
 
-            db.UserCards.Add(new UserCard
-            {
-                UserId = _state.State.UserId,
-                CardId = cardId,
-                Level = 1,
-                DuplicateCount = 0
-            });
-            await db.SaveChangesAsync();
-        }
-
+        _isDirty = true;
         await _state.WriteStateAsync();
     }
 
@@ -130,8 +176,7 @@ public class UserGrain : Grain, IUserGrain
     public async Task AddFaithAsync(int amount)
     {
         _state.State.Faith += amount;
-
-        await PersistCurrencyAsync();
+        _isDirty = true;
         await _state.WriteStateAsync();
     }
 
@@ -141,23 +186,7 @@ public class UserGrain : Grain, IUserGrain
             throw new InvalidOperationException($"신앙심이 부족합니다. (보유: {_state.State.Faith}, 필요: {amount})");
 
         _state.State.Faith -= amount;
-
-        await PersistCurrencyAsync();
+        _isDirty = true;
         await _state.WriteStateAsync();
-    }
-
-    private async Task PersistCurrencyAsync()
-    {
-        using var scope = _serviceProvider.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        var currency = await db.UserCurrencies.FindAsync(_state.State.UserId);
-        if (currency is not null)
-        {
-            currency.Eleaf = _state.State.Eleaf;
-            currency.Gold = _state.State.Gold;
-            currency.Faith = _state.State.Faith;
-            await db.SaveChangesAsync();
-        }
     }
 }

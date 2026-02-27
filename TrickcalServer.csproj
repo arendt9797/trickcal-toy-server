@@ -15,6 +15,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.3" />
     <PackageReference Include="Microsoft.OpenApi" Version="2.4.1" />
     <PackageReference Include="Microsoft.Orleans.Client" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Orleans.Persistence.Redis" Version="10.0.1" />
     <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.0.1" />
     <PackageReference Include="Microsoft.Orleans.Server" Version="10.0.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />

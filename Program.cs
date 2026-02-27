@@ -6,8 +6,12 @@ var builder = WebApplication.CreateBuilder(args);
 // ── Orleans Silo ──
 builder.Host.UseOrleans(silo =>
 {
-    silo.UseLocalhostClustering();          // 개발용 단일 노드 클러스터링
-    silo.AddMemoryGrainStorageAsDefault();  // 개발용 인메모리 Grain 상태 저장
+    silo.UseLocalhostClustering();
+    silo.AddRedisGrainStorageAsDefault(options =>
+    {
+        options.ConfigurationOptions = StackExchange.Redis.ConfigurationOptions.Parse(
+            builder.Configuration.GetConnectionString("Redis")!);
+    });
 });
 
 // ── EF Core + PostgreSQL ──

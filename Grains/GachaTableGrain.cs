@@ -100,9 +100,10 @@ public class GachaTableGrain : Grain, IGachaTableGrain
             }
         }
 
-        // 3성 이상: 3% 분배 (3성 2.7%, 엘다인 0.3%)
-        const decimal star3BaseRate = 0.027m;
-        const decimal eldainBaseRate = 0.003m;
+        // 3성 이상: 3% 분배 (3성:엘다인 = 9:1 고정 비율)
+        const decimal highTierTotalRate = 0.03m;
+        const decimal star3Ratio = 0.9m;  // 2.7%
+        const decimal eldainRatio = 0.1m; // 0.3%
 
         var highTierCards = star3Cards.Concat(eldainCards).ToList();
         if (highTierCards.Count > 0)
@@ -122,9 +123,10 @@ public class GachaTableGrain : Grain, IGachaTableGrain
                 });
             }
 
-            // 픽업 등급에 따라 해당 등급의 잔여 확률에서만 픽업 확률 차감
-            var remainingStar3Rate = star3BaseRate - (pickupCard?.Grade == CardGrade.Star3 ? pickupRate : 0m);
-            var remainingEldainRate = eldainBaseRate - (pickupCard?.Grade == CardGrade.Eldain ? pickupRate : 0m);
+            // 픽업 제외 잔여 확률을 3성:엘다인 = 9:1 비율로 분배
+            var remainingRate = highTierTotalRate - (pickupCard is not null ? pickupRate : 0m);
+            var remainingStar3Rate = remainingRate * star3Ratio;
+            var remainingEldainRate = remainingRate * eldainRatio;
 
             // 나머지 3성 카드 분배
             var nonPickupStar3Cards = star3Cards.Where(c => c.Id != banner.PickupCardId).ToList();

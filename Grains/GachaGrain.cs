@@ -22,6 +22,11 @@ public class GachaGrain : Grain, IGachaGrain
     /// </summary>
     public async Task<GachaResultDto> PullAsync(string userId)
     {
+        var bannerId = this.GetPrimaryKeyString();
+
+        // 배너 유효성 확인
+        await ValidateBannerAsync(bannerId);
+
         var userGrain = _grainFactory.GetGrain<IUserGrain>(userId);
 
         // 엘리프 확인 및 차감
@@ -30,7 +35,6 @@ public class GachaGrain : Grain, IGachaGrain
             throw new InvalidOperationException($"엘리프가 부족합니다. (보유: {currency.Eleaf}, 필요: 100)");
 
         // 확률 테이블 조회
-        var bannerId = this.GetPrimaryKeyString();
         var tableGrain = _grainFactory.GetGrain<IGachaTableGrain>(bannerId);
         var rateTable = await tableGrain.GetRatesAsync();
 
@@ -73,6 +77,11 @@ public class GachaGrain : Grain, IGachaGrain
     /// </summary>
     public async Task<GachaTenResultDto> PullTenAsync(string userId)
     {
+        var bannerId = this.GetPrimaryKeyString();
+
+        // 배너 유효성 확인
+        await ValidateBannerAsync(bannerId);
+
         var userGrain = _grainFactory.GetGrain<IUserGrain>(userId);
 
         // 엘리프 확인 및 차감
@@ -81,7 +90,6 @@ public class GachaGrain : Grain, IGachaGrain
             throw new InvalidOperationException($"엘리프가 부족합니다. (보유: {currency.Eleaf}, 필요: 1000)");
 
         // 확률 테이블 조회
-        var bannerId = this.GetPrimaryKeyString();
         var tableGrain = _grainFactory.GetGrain<IGachaTableGrain>(bannerId);
         var rateTable = await tableGrain.GetRatesAsync();
 
@@ -152,13 +160,16 @@ public class GachaGrain : Grain, IGachaGrain
         var bannerId = this.GetPrimaryKeyString();
         var bannerIdInt = int.Parse(bannerId);
 
-        // 배너 정보 조회
+        // 배너 정보 조회 및 유효성 확인
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var banner = await db.GachaBanners
             .Include(b => b.PickupCard)
             .FirstOrDefaultAsync(b => b.Id == bannerIdInt)
-            ?? throw new InvalidOperationException($"배너를 찾을 수 없습니다. (ID: {bannerId})");
+            ?? throw new BannerNotFoundException(bannerIdInt);
+
+        if (!banner.IsActive || banner.EndDate < DateTime.UtcNow)
+            throw new BannerExpiredException(bannerIdInt);
 
         // 필요 신앙심 결정
         var requiredFaith = banner.IsPickupEldain ? 300 : 200;
@@ -187,6 +198,22 @@ public class GachaGrain : Grain, IGachaGrain
             },
             FaithAfter = faithAfter
         };
+    }
+
+    /// <summary>
+    /// 배너 존재 여부 및 활성/만료 검증
+    /// </summary>
+    private async Task ValidateBannerAsync(string bannerId)
+    {
+        var bannerIdInt = int.Parse(bannerId);
+        using var scope = _serviceProvider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var banner = await db.GachaBanners.FindAsync(bannerIdInt)
+            ?? throw new BannerNotFoundException(bannerIdInt);
+
+        if (!banner.IsActive || banner.EndDate < DateTime.UtcNow)
+            throw new BannerExpiredException(bannerIdInt);
     }
 
     /// <summary>

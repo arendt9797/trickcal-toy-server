@@ -52,6 +52,49 @@ public record UserCurrencyDto
     [Id(3)] public int Faith { get; init; }
 }
 
+// ── Banner DTOs ──
+
+public record CardSummaryDto
+{
+    public int Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string Grade { get; init; } = string.Empty;
+}
+
+public record BannerDto
+{
+    public int Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public CardSummaryDto PickupCard { get; init; } = null!;
+    public decimal PickupRate { get; init; }
+    public DateTime StartDate { get; init; }
+    public DateTime EndDate { get; init; }
+    public bool IsActive { get; init; }
+}
+
+public record CreateBannerRequest
+{
+    public string Name { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public int PickupCardId { get; init; }
+    public bool IsPickupEldain { get; init; }
+    public decimal PickupRate { get; init; }
+    public DateTime StartDate { get; init; }
+    public DateTime EndDate { get; init; }
+}
+
+public record UpdateBannerRequest
+{
+    public string? Name { get; init; }
+    public string? Description { get; init; }
+    public int? PickupCardId { get; init; }
+    public decimal? PickupRate { get; init; }
+    public DateTime? StartDate { get; init; }
+    public DateTime? EndDate { get; init; }
+    public bool? IsActive { get; init; }
+}
+
 // ── Grain 상태 ──
 // DB에서 불러와서 메모리(grain)에 올려놓는 상태
 // "이 유저의 전체 정보를 메모리에 이렇게 들고 있을거야"

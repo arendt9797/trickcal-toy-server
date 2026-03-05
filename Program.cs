@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TrickcalServer.Data;
+using TrickcalServer.Infrastructure;
+using TrickcalServer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,13 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.Configuration = builder.Configuration.GetConnectionString("Redis");
     options.InstanceName = "Trickcal:";
 });
+
+// ── BannerService ──
+builder.Services.AddScoped<IBannerService, BannerService>();
+
+// ── 글로벌 예외 핸들러 ──
+builder.Services.AddExceptionHandler<BannerExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 // ── ASP.NET Core MVC + Swagger ──
 builder.Services.AddControllers()
@@ -60,6 +69,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+app.UseExceptionHandler();
 app.MapControllers();
 
 app.Run();

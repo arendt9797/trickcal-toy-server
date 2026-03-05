@@ -32,6 +32,9 @@ public class AppDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Name).HasMaxLength(100);
             entity.Property(e => e.PickupRate).HasPrecision(10, 6);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("NOW()");
             entity.HasOne(e => e.PickupCard)
                   .WithMany()
                   .HasForeignKey(e => e.PickupCardId)
@@ -100,28 +103,35 @@ public class AppDbContext : DbContext
 
     private static void SeedBanners(ModelBuilder mb)
     {
+        var seedTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         mb.Entity<GachaBanner>().HasData(
             new GachaBanner
             {
                 Id = 1,
                 Name = "신규 사도 픽업",
+                Description = "새로운 전사 사도 발키리 등장!",
                 PickupCardId = 18,          // 발키리 (3성)
                 IsPickupEldain = false,
                 PickupRate = 0.008m,
                 StartDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 EndDate = new DateTime(2026, 12, 31, 23, 59, 59, DateTimeKind.Utc),
-                IsActive = true
+                IsActive = true,
+                CreatedAt = seedTime,
+                UpdatedAt = seedTime
             },
             new GachaBanner
             {
                 Id = 2,
                 Name = "엘다인 특별 픽업",
+                Description = "신족의 지배자 엘다인 특별 픽업!",
                 PickupCardId = 20,          // 엘다인
                 IsPickupEldain = true,
                 PickupRate = 0.006m,
                 StartDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 EndDate = new DateTime(2026, 12, 31, 23, 59, 59, DateTimeKind.Utc),
-                IsActive = true
+                IsActive = true,
+                CreatedAt = seedTime,
+                UpdatedAt = seedTime
             }
         );
     }
